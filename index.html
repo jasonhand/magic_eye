@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Eye Stereogram Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4f46e5;
+            background: #f1f5f9;
+        }
+
+        .upload-section.dragover {
+            border-color: #4f46e5;
+            background: #eef2ff;
+            transform: scale(1.02);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-button {
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        .size-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .size-info h3 {
+            color: #92400e;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .size-info ul {
+            color: #92400e;
+            text-align: left;
+            margin-left: 20px;
+        }
+
+        .size-info li {
+            margin-bottom: 5px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .generate-button {
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .generate-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .generate-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .preview-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .preview-container {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .preview-container h3 {
+            margin-bottom: 15px;
+            color: #374151;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .download-button {
+            background: linear-gradient(45deg, #8b5cf6, #a855f7);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .instructions {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .instructions p {
+            color: #1e40af;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔮 Magic Eye Generator</h1>
+            <p>Transform your images into mesmerizing stereogram illusions</p>
+        </div>
+        
+        <div class="content">
+            <div class="instructions">
+                <h3>How to view Magic Eye images:</h3>
+                <p>To see the hidden 3D image, relax your eyes and look "through" the image as if looking at something far behind it. The 3D shape should gradually come into focus. It may take practice!</p>
+            </div>
+
+            <div class="size-info">
+                <h3>⚠️ Image Size Limitations</h3>
+                <ul>
+                    <li><strong>Recommended:</strong> Images under 2MB for best performance</li>
+                    <li><strong>Maximum resolution:</strong> 1920x1080 pixels</li>
+                    <li><strong>Supported formats:</strong> JPG, PNG, GIF</li>
+                    <li><strong>Note:</strong> Larger images may cause slow processing or browser crashes</li>
+                </ul>
+            </div>
+
+            <div class="upload-section" id="uploadSection">
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <button class="upload-button" onclick="document.getElementById('fileInput').click()">
+                    📁 Choose Image File
+                </button>
+                <p>or drag and drop an image here</p>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="depthValue">Depth Intensity</label>
+                    <input type="range" id="depthValue" min="0.1" max="1.0" step="0.1" value="0.5">
+                    <span id="depthDisplay">0.5</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="patternWidth">Pattern Width</label>
+                    <input type="range" id="patternWidth" min="50" max="200" step="10" value="100">
+                    <span id="patternDisplay">100px</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="outputWidth">Output Width</label>
+                    <input type="number" id="outputWidth" min="200" max="1920" value="800" placeholder="Width in pixels">
+                </div>
+                
+                <div class="control-group">
+                    <label for="outputHeight">Output Height</label>
+                    <input type="number" id="outputHeight" min="200" max="1080" value="600" placeholder="Height in pixels">
+                </div>
+            </div>
+
+            <button class="generate-button" id="generateButton" disabled onclick="generateStereogram()">
+                ✨ Generate Magic Eye Image
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Creating your Magic Eye image...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="preview-section" id="previewSection">
+                <div class="preview-container">
+                    <h3>Your Magic Eye Image:</h3>
+                    <canvas id="resultCanvas" class="image-preview"></canvas>
+                    <br>
+                    <button class="download-button" onclick="downloadImage()">
+                        💾 Download Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/gh/tony-pizza/Stereogram.js@master/stereogram.js"></script>
+    <script>
+        let uploadedImage = null;
+        let stereogramGenerator = null;
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateSliderDisplays();
+        });
+
+        function setupEventListeners() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadSection = document.getElementById('uploadSection');
+            const depthSlider = document.getElementById('depthValue');
+            const patternSlider = document.getElementById('patternWidth');
+
+            // File input change
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Drag and drop
+            uploadSection.addEventListener('dragover', handleDragOver);
+            uploadSection.addEventListener('drop', handleDrop);
+            uploadSection.addEventListener('dragleave', handleDragLeave);
+
+            // Slider updates
+            depthSlider.addEventListener('input', updateSliderDisplays);
+            patternSlider.addEventListener('input', updateSliderDisplays);
+        }
+
+        function updateSliderDisplays() {
+            const depthValue = document.getElementById('depthValue').value;
+            const patternValue = document.getElementById('patternWidth').value;
+            
+            document.getElementById('depthDisplay').textContent = depthValue;
+            document.getElementById('patternDisplay').textContent = patternValue + 'px';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            document.getElementById('uploadSection').classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            document.getElementById('uploadSection').classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('uploadSection').classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            // Check file size (2MB limit)
+            if (file.size > 2 * 1024 * 1024) {
+                showError('File size too large. Please choose an image under 2MB.');
+                return;
+            }
+
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select a valid image file (JPG, PNG, GIF).');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Check image dimensions
+                    if (img.width > 1920 || img.height > 1080) {
+                        showError('Image dimensions too large. Maximum: 1920x1080 pixels.');
+                        return;
+                    }
+
+                    uploadedImage = img;
+                    document.getElementById('generateButton').disabled = false;
+                    hideError();
+                    
+                    // Update output dimensions to match image aspect ratio
+                    const aspectRatio = img.width / img.height;
+                    const newWidth = Math.min(800, img.width);
+                    const newHeight = Math.round(newWidth / aspectRatio);
+                    
+                    document.getElementById('outputWidth').value = newWidth;
+                    document.getElementById('outputHeight').value = newHeight;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function generateStereogram() {
+            if (!uploadedImage) {
+                showError('Please select an image first.');
+                return;
+            }
+
+            showLoading();
+            hideError();
+
+            // Get parameters
+            const depthValue = parseFloat(document.getElementById('depthValue').value);
+            const patternWidth = parseInt(document.getElementById('patternWidth').value);
+            const outputWidth = parseInt(document.getElementById('outputWidth').value);
+            const outputHeight = parseInt(document.getElementById('outputHeight').value);
+
+            // Use setTimeout to allow UI to update
+            setTimeout(() => {
+                try {
+                    // Create depth map from the uploaded image
+                    const depthCanvas = createDepthMap(uploadedImage, outputWidth, outputHeight);
+                    
+                    // Generate stereogram
+                    const resultCanvas = document.getElementById('resultCanvas');
+                    resultCanvas.width = outputWidth;
+                    resultCanvas.height = outputHeight;
+                    
+                    const ctx = resultCanvas.getContext('2d');
+                    
+                    // Create stereogram using a simple random dot pattern
+                    generateRandomDotStereogram(ctx, depthCanvas, outputWidth, outputHeight, patternWidth, depthValue);
+                    
+                    hideLoading();
+                    showPreview();
+                    
+                } catch (error) {
+                    console.error('Error generating stereogram:', error);
+                    hideLoading();
+                    showError('Error generating stereogram. Please try with a smaller image.');
+                }
+            }, 100);
+        }
+
+        function createDepthMap(img, width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw and scale the image
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to grayscale depth map
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = gray;     // Red
+                data[i + 1] = gray; // Green
+                data[i + 2] = gray; // Blue
+                // Alpha stays the same
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            return canvas;
+        }
+
+        function generateRandomDotStereogram(ctx, depthCanvas, width, height, patternWidth, depthScale) {
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+            const depthCtx = depthCanvas.getContext('2d');
+            const depthData = depthCtx.getImageData(0, 0, width, height).data;
+            
+            // Create random pattern
+            const pattern = new Array(patternWidth);
+            for (let i = 0; i < patternWidth; i++) {
+                pattern[i] = {
+                    r: Math.floor(Math.random() * 256),
+                    g: Math.floor(Math.random() * 256),
+                    b: Math.floor(Math.random() * 256)
+                };
+            }
+            
+            // Generate stereogram
+            for (let y = 0; y < height; y++) {
+                const row = new Array(width);
+                
+                // Initialize the first pattern
+                for (let x = 0; x < Math.min(patternWidth, width); x++) {
+                    row[x] = pattern[x];
+                }
+                
+                // Generate the rest of the row
+                for (let x = patternWidth; x < width; x++) {
+                    const depthIndex = (y * width + x) * 4;
+                    const depth = depthData[depthIndex] / 255; // Normalize to 0-1
+                    const shift = Math.round(depth * depthScale * 20); // Adjust shift amount
+                    
+                    const sourceX = x - patternWidth + shift;
+                    if (sourceX >= 0 && sourceX < x) {
+                        row[x] = row[sourceX];
+                    } else {
+                        row[x] = pattern[x % patternWidth];
+                    }
+                }
+                
+                // Copy row to image data
+                for (let x = 0; x < width; x++) {
+                    const index = (y * width + x) * 4;
+                    data[index] = row[x].r;     // Red
+                    data[index + 1] = row[x].g; // Green
+                    data[index + 2] = row[x].b; // Blue
+                    data[index + 3] = 255;      // Alpha
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('generateButton').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('generateButton').disabled = false;
+        }
+
+        function showPreview() {
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function downloadImage() {
+            const canvas = document.getElementById('resultCanvas');
+            const link = document.createElement('a');
+            link.download = 'magic-eye-stereogram.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
